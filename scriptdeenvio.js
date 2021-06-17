@@ -1,90 +1,72 @@
-const fs = require('fs');
 const csv = require('@fast-csv/parse');
-var nodemailer = require('nodemailer');
+const nodemailer = require('nodemailer');
 
-
-
-var dataArr = [];
-
-
-csv.parseFile("Boletos.csv", {
-  objectMode: true,
-  headers: true,
-  delimiter: ";"
-  })
-.on("data", data => {
-  dataArr.push(data);
-})
-.on("end", () => {
-  printa();
-  
-});
-
-const printa = () =>{
-
-      
-  var remetente = nodemailer.createTransport({
+const senderConfig = {
     host: "smtp.gmail.com",
     service: "gmail",
     port: 587,
     secure: true,
     auth:{
-        user: "insira seu email",
-        pass: "insira a sua senha" }
-    });
-    
+        user: "insira seu email aqui",
+        pass: "insira a sua senha aqui" 
+    }
+}
 
-dataArr.forEach( item => {
+const sender = nodemailer.createTransport(senderConfig)
 
-    var emailASerEnviado = {
-        from: "email do remetente",
-        to: item.email,
-        subject: `Prezado ${item.nome}, se vc recebeu minha msg, mande uma foto do seu documento`,
-        text: "insira sua mensagem aqui ",
-              
-      }
-        if (item.pagamento == 'Boleto'){    
-              emailASerEnviado['attachments'] = [
-                      {   // utf-8 string as an attachment
-                          filename: `${item.matricula}.pdf`,
-                          path: `${item.matricula}.pdf`
-                      },
-            ] 
-        } else {
-           emailASerEnviado['attachments'] = [
-                      {   // utf-8 string as an attachment
-                          filename: `insira o nome do seu arquivo caso debito`,
-                          path: `insira aqui o PATH do anexo caso seja debito`
-                      },
-            ] 
+const endEvent = (data) => {
+
+    index = 0
+
+    const send = () => {
+
+        const item = data[index]
+
+        const message = {
+            from: "insira seu e-mail aqui",
+            subject: `Prezado ${item.nome}, se vc recebeu minha msg, mande uma foto do seu documento`,
+            text: "insira sua mensagem aqui ",
+            to: item.email,
+            attachments: {}
         }
 
+        const isBillet = item.pagamento === 'Boleto'
 
+        message.attachments['filename'] = isBillet ? `adicione o caminho do seu anexo` : `adicione o caminho do seu anexo`
+        message.attachments['path']     = isBillet ? `adicione o caminho do seu anexo` : `adicione o caminho do seu anexo`
 
+        sender.sendMail(message, () => {
 
-    remetente.sendMail(emailASerEnviado, function(error){
-        if (error) {
-        console.log(error);
-        } else {
-        console.log("Email enviado com sucesso.");
-        }
-        });
+            console.log(message)
+            
+                console.log("Email enviado com sucesso.")
+                if(index < data.length - 1){
+                    index ++
+                    setTimeout( ()=> {send()},100)
+                
+            }
+            
+        })
+    }
 
-    })
-
+    send()
     
 }
 
+const readCSV = (fileName) => {
 
+    const dataRows = []
 
+    const parseConfig = {
+        objectMode: true,
+        headers: true,
+        delimiter: ";"
+    }
 
+    const dataEvent = data => {dataRows.push(data)}
 
+    csv.parseFile(fileName, parseConfig).on("data", dataEvent).on('end', () => {endEvent(dataRows)})
 
+}
 
-
-
-
-
-
-
-
+readCSV("insira aqui o caminho do seu arquivo csv")
